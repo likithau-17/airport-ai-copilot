@@ -9,3 +9,4 @@ google-generativeai
 streamlit
 langchain-huggingface
 google-genai
+pytest
