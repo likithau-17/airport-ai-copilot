@@ -7,3 +7,5 @@ pandas
 python-dotenv
 google-generativeai
 streamlit
+langchain-huggingface
+google-genai
