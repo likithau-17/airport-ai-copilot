@@ -55,3 +55,27 @@ def test_conversation_memory_integration():
     assert first["resolved_airport"] == "SFO"
     assert second["resolved_airport"] == "SFO"
     assert len(memory.get_history()) == 2
+
+
+def test_controlled_agent_loop():
+    from src.agents import run_controlled_agent_loop
+
+    result = run_controlled_agent_loop("SFO")
+
+    assert result["iterations"] == 3
+    assert result["max_iterations"] == 5
+    assert [step["agent"] for step in result["steps"]] == [
+        "Operations Investigator",
+        "Policy & Compliance",
+        "Resolution",
+    ]
+    assert result["policy_review"]["status"] == "approval_required"
+
+
+def test_controlled_agent_loop_never_exceeds_five_iterations():
+    from src.agents import run_controlled_agent_loop
+
+    result = run_controlled_agent_loop("SFO", max_iterations=10)
+
+    assert result["max_iterations"] == 5
+    assert result["iterations"] <= 5

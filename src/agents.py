@@ -169,3 +169,61 @@ def run_conversation_turn(
     result["resolved_airport"] = resolved_airport
 
     return result
+
+
+def run_controlled_agent_loop(airport_code: str, max_iterations: int = 5) -> dict:
+    """Run a bounded operations reasoning loop."""
+
+    if max_iterations < 1:
+        raise ValueError("max_iterations must be at least 1.")
+
+    max_iterations = min(max_iterations, 5)
+    steps = []
+
+    investigation = investigate_operations(airport_code)
+    steps.append(
+        {
+            "iteration": 1,
+            "agent": "Operations Investigator",
+            "action": "investigate_operations",
+            "status": "completed",
+        }
+    )
+
+    policy_review = None
+    if investigation["metrics"]["surge_multiplier"] >= 1.3 and len(steps) < max_iterations:
+        policy_review = check_policy_compliance(
+            airport_code,
+            "surge",
+            investigation["metrics"]["surge_multiplier"],
+        )
+        steps.append(
+            {
+                "iteration": 2,
+                "agent": "Policy & Compliance",
+                "action": "check_policy_compliance",
+                "status": policy_review["status"],
+            }
+        )
+
+    resolution = None
+    if len(steps) < max_iterations:
+        resolution = resolve_operations(investigation)
+        steps.append(
+            {
+                "iteration": len(steps) + 1,
+                "agent": "Resolution",
+                "action": "resolve_operations",
+                "status": "completed",
+            }
+        )
+
+    return {
+        "airport_code": airport_code.upper(),
+        "iterations": len(steps),
+        "max_iterations": max_iterations,
+        "steps": steps,
+        "investigation": investigation,
+        "policy_review": policy_review,
+        "resolution": resolution,
+    }
