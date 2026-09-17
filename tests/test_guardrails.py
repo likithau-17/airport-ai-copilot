@@ -1,6 +1,6 @@
 import pytest
 
-from src.guardrails import classify_action_risk
+from src.guardrails import classify_action_risk, validate_policy_action
 
 
 def test_metrics_are_low_risk():
@@ -71,3 +71,28 @@ def test_invalid_incentive_is_rejected_with_error():
 def test_unknown_action_is_rejected_with_error():
     with pytest.raises(ValueError):
         classify_action_risk("unknown", 10)
+
+
+def test_policy_allows_standard_surge():
+    result = validate_policy_action("SFO", "surge", 1.2)
+    assert result["status"] == "allowed"
+
+
+def test_policy_requires_approval_for_high_surge():
+    result = validate_policy_action("SFO", "surge", 1.6)
+    assert result["status"] == "approval_required"
+
+
+def test_policy_rejects_excessive_surge():
+    result = validate_policy_action("SFO", "surge", 2.1)
+    assert result["status"] == "rejected"
+
+
+def test_policy_allows_incentive_up_to_25():
+    result = validate_policy_action("SFO", "incentive", 25)
+    assert result["status"] == "allowed"
+
+
+def test_policy_requires_approval_above_25():
+    result = validate_policy_action("SFO", "incentive", 30)
+    assert result["status"] == "approval_required"
