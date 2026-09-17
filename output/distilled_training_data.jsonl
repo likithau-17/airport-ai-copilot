@@ -1,0 +1,4 @@
+{"airport_code":"SFO","action_type":"surge","proposed_value":1.6,"policy_status":"approval_required","approval_decision":"approved","execution_status":"approved","reason":"Surge multiplier of 1.3x or higher requires human approval."}
+{"airport_code":"LAX","action_type":"surge","proposed_value":2.1,"policy_status":"rejected","approval_decision":"not_applicable","execution_status":"blocked","reason":"Surge multiplier exceeds the maximum permitted 2.0x."}
+{"airport_code":"JFK","action_type":"incentive","proposed_value":25.0,"policy_status":"allowed","approval_decision":"not_required","execution_status":"ready","reason":"Incentive is within the medium-impact policy threshold."}
+{"airport_code":"SFO","action_type":"incentive","proposed_value":30.0,"policy_status":"approval_required","approval_decision":"denied","execution_status":"blocked","reason":"Incentives above $25 per eligible driver require human approval."}
