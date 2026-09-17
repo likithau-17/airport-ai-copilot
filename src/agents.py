@@ -227,3 +227,20 @@ def run_controlled_agent_loop(airport_code: str, max_iterations: int = 5) -> dic
         "policy_review": policy_review,
         "resolution": resolution,
     }
+
+
+from src.vector_store import retrieve_policy_context
+
+
+def retrieve_policy_for_agent(question: str) -> dict:
+    """Retrieve relevant airport policy context for an agent decision."""
+
+    context = retrieve_policy_context(question)
+
+    return {
+        "question": question,
+        "context": context,
+        "source_count": len(
+            [section for section in context.split("\n\n---\n\n") if section.strip()]
+        ),
+    }

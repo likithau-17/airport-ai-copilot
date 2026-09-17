@@ -79,3 +79,15 @@ def test_controlled_agent_loop_never_exceeds_five_iterations():
 
     assert result["max_iterations"] == 5
     assert result["iterations"] <= 5
+
+
+def test_retrieve_policy_for_agent():
+    from src.agents import retrieve_policy_for_agent
+
+    result = retrieve_policy_for_agent(
+        "What is the maximum allowed surge multiplier at SFO?"
+    )
+
+    assert result["source_count"] > 0
+    assert "SFO" in result["context"]
+    assert "2.0x" in result["context"]
