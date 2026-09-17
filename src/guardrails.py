@@ -1,3 +1,6 @@
+import json
+from pathlib import Path
+
 def classify_action_risk(action_type: str, value: float = 0.0) -> dict:
     """Classify an operational action according to guardrail policy."""
 
@@ -184,6 +187,15 @@ def create_audit_record(
         "proposed_value": proposed_value,
         "policy_status": validation_result["status"],
         "approval_decision": approval_result["approval_decision"],
-        "execution_status": approval_result["execution_status"],
+        "execution_status": approval_result.get("execution_status", "unknown"),
         "reason": validation_result["reason"],
     }
+
+def save_audit_record(audit_record: dict) -> None:
+    """Persist an audit record as one JSON object per line."""
+
+    audit_file = Path("output/audit_log.jsonl")
+    audit_file.parent.mkdir(parents=True, exist_ok=True)
+
+    with audit_file.open("a", encoding="utf-8") as file:
+        file.write(json.dumps(audit_record) + "\n")

@@ -5,3 +5,4 @@ __pycache__/
 .ipynb_checkpoints/
 .DS_Store
 data/faiss_index/
+output/audit_log.jsonl
