@@ -1,6 +1,6 @@
 import pytest
 
-from src.guardrails import classify_action_risk, validate_policy_action
+from src.guardrails import classify_action_risk, validate_policy_action, process_human_approval
 
 
 def test_metrics_are_low_risk():
@@ -96,3 +96,35 @@ def test_policy_allows_incentive_up_to_25():
 def test_policy_requires_approval_above_25():
     result = validate_policy_action("SFO", "incentive", 30)
     assert result["status"] == "approval_required"
+
+
+def test_human_approval_allows_validated_action():
+    validation = validate_policy_action("SFO", "surge", 1.6)
+    result = process_human_approval(validation, approved=True)
+
+    assert result["execution_status"] == "approved"
+    assert result["approval_decision"] == "approved"
+
+
+def test_human_denial_blocks_action():
+    validation = validate_policy_action("SFO", "surge", 1.6)
+    result = process_human_approval(validation, approved=False)
+
+    assert result["execution_status"] == "blocked"
+    assert result["approval_decision"] == "denied"
+
+
+def test_rejected_action_cannot_be_approved():
+    validation = validate_policy_action("SFO", "surge", 2.1)
+    result = process_human_approval(validation, approved=True)
+
+    assert result["execution_status"] == "blocked"
+    assert result["approval_decision"] == "not_applicable"
+
+
+def test_allowed_action_does_not_need_approval():
+    validation = validate_policy_action("SFO", "surge", 1.2)
+    result = process_human_approval(validation, approved=False)
+
+    assert result["execution_status"] == "ready"
+    assert result["approval_decision"] == "not_required"

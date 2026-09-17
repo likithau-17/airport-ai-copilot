@@ -124,3 +124,42 @@ def validate_policy_action(
         }
 
     raise ValueError(f"Unsupported action type: {action_type}")
+
+
+def process_human_approval(
+    validation_result: dict,
+    approved: bool,
+) -> dict:
+    """Process a human approval decision for a policy-validated action."""
+
+    status = validation_result["status"]
+
+    if status == "rejected":
+        return {
+            **validation_result,
+            "execution_status": "blocked",
+            "approval_decision": "not_applicable",
+        }
+
+    if status == "allowed":
+        return {
+            **validation_result,
+            "execution_status": "ready",
+            "approval_decision": "not_required",
+        }
+
+    if status == "approval_required":
+        if approved:
+            return {
+                **validation_result,
+                "execution_status": "approved",
+                "approval_decision": "approved",
+            }
+
+        return {
+            **validation_result,
+            "execution_status": "blocked",
+            "approval_decision": "denied",
+        }
+
+    raise ValueError(f"Unknown validation status: {status}")
