@@ -1,6 +1,6 @@
 import pytest
 
-from src.guardrails import classify_action_risk, validate_policy_action, process_human_approval
+from src.guardrails import classify_action_risk, validate_policy_action, process_human_approval, create_audit_record
 
 
 def test_metrics_are_low_risk():
@@ -128,3 +128,25 @@ def test_allowed_action_does_not_need_approval():
 
     assert result["execution_status"] == "ready"
     assert result["approval_decision"] == "not_required"
+
+
+def test_audit_record_captures_approved_action():
+    validation = validate_policy_action("SFO", "surge", 1.6)
+    approval = process_human_approval(validation, approved=True)
+
+    record = create_audit_record(
+        "SFO",
+        "surge",
+        1.6,
+        validation,
+        approval,
+    )
+
+    assert record["airport_code"] == "SFO"
+    assert record["action_type"] == "surge"
+    assert record["proposed_value"] == 1.6
+    assert record["policy_status"] == "approval_required"
+    assert record["approval_decision"] == "approved"
+    assert record["execution_status"] == "approved"
+    assert "timestamp" in record
+    assert "reason" in record

@@ -163,3 +163,27 @@ def process_human_approval(
         }
 
     raise ValueError(f"Unknown validation status: {status}")
+
+
+from datetime import datetime, timezone
+
+
+def create_audit_record(
+    airport_code: str,
+    action_type: str,
+    proposed_value: float,
+    validation_result: dict,
+    approval_result: dict,
+) -> dict:
+    """Create an auditable record of an operational action."""
+
+    return {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "airport_code": airport_code.upper(),
+        "action_type": action_type.lower(),
+        "proposed_value": proposed_value,
+        "policy_status": validation_result["status"],
+        "approval_decision": approval_result["approval_decision"],
+        "execution_status": approval_result["execution_status"],
+        "reason": validation_result["reason"],
+    }
