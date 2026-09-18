@@ -56,21 +56,6 @@ def get_retriever():
     return vector_store.as_retriever(search_kwargs={"k": 3})
 
 
-def get_retriever():
-    """Load the saved FAISS index and return a similarity retriever."""
-    embeddings = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-MiniLM-L6-v2"
-    )
-
-    vector_store = FAISS.load_local(
-        str(VECTOR_STORE_DIR),
-        embeddings,
-        allow_dangerous_deserialization=True,
-    )
-
-    return vector_store.as_retriever(search_kwargs={"k": 3})
-
-
 def retrieve_policy_context(question: str) -> str:
     """Retrieve relevant policy chunks and combine them into context."""
 
