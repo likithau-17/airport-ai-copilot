@@ -10,6 +10,8 @@ from google import genai
 from src.config import GEMINI_API_KEY, GEMINI_MODEL
 from src.prompts import build_policy_prompt
 
+from functools import lru_cache
+
 
 VECTOR_STORE_DIR = Path("data/faiss_index")
 
@@ -34,11 +36,16 @@ if __name__ == "__main__":
     print(f"FAISS index created with {store.index.ntotal} vectors")
 
 
-def get_retriever():
-    """Load the saved FAISS index and return a similarity retriever."""
-    embeddings = HuggingFaceEmbeddings(
+@lru_cache(maxsize=1)
+def get_embeddings():
+    return HuggingFaceEmbeddings(
         model_name="sentence-transformers/all-MiniLM-L6-v2"
     )
+
+
+def get_retriever():
+    """Load the saved FAISS index and return a similarity retriever."""
+    embeddings = get_embeddings()
 
     vector_store = FAISS.load_local(
         str(VECTOR_STORE_DIR),
@@ -83,9 +90,15 @@ def answer_policy_question(question: str) -> str:
 
     client = genai.Client(api_key=GEMINI_API_KEY)
 
-    response = client.models.generate_content(
-        model=GEMINI_MODEL,
-        contents=prompt,
-    )
-
-    return response.text
+    try:
+        response = client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=prompt,
+        )
+        return response.text
+    except Exception:
+        return (
+            "The AI service is temporarily unavailable. "
+            "The retrieved policy context is available, but the language model "
+            "could not generate a response right now."
+        )

@@ -30,8 +30,8 @@ def split_policy_documents(documents: list[Document]) -> list[Document]:
     from langchain_text_splitters import RecursiveCharacterTextSplitter
 
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size=500,
-        chunk_overlap=100,
+        chunk_size=800,
+        chunk_overlap=150,
     )
 
     return splitter.split_documents(documents)

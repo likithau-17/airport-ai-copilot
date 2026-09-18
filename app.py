@@ -15,6 +15,11 @@ from src.guardrails import (
     save_audit_record,
 )
 
+from src.vector_store import answer_policy_question
+
+from src.memory import ConversationMemory
+from src.agents import run_conversation_turn
+
 st.set_page_config(
     page_title="Airport Operations AI Copilot",
     page_icon="✈️",
@@ -26,6 +31,12 @@ st.caption("Generative AI assistant for airport operations and marketplace analy
 
 if "investigation" not in st.session_state:
     st.session_state.investigation = None
+
+if "memory" not in st.session_state:
+    st.session_state.memory = ConversationMemory()
+
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
 
 airport_code = st.selectbox(
     "Select Airport",
@@ -198,3 +209,67 @@ if st.session_state.investigation:
 
             else:
                 st.warning("⏳ Waiting for human approval.")
+
+st.subheader("💬 Operations Assistant")
+
+for message in st.session_state.chat_history:
+    with st.chat_message(message["role"]):
+        st.write(message["content"])
+
+user_query = st.chat_input(
+    "Ask about airport operations, metrics, or policy..."
+)
+
+if user_query:
+    st.session_state.chat_history.append(
+        {
+            "role": "user",
+            "content": user_query,
+        }
+    )
+
+    conversation = run_conversation_turn(
+        st.session_state.memory,
+        user_query,
+        airport_code,
+    )
+
+    resolved_airport = conversation["resolved_airport"]
+
+    with st.chat_message("assistant"):
+        try:
+            with st.spinner("Searching airport policies..."):
+                answer = answer_policy_question(
+                    f"""
+    Previous conversation context:
+    {st.session_state.memory.get_history()}
+
+    Current airport:
+    {resolved_airport}
+
+    User question:
+    {user_query}
+    """.strip()
+                )
+        except Exception as exc:
+            answer = (
+                "The AI service is temporarily unavailable. "
+                "Please try the question again in a moment."
+            )
+            st.warning(f"AI service error: {exc}")
+
+        st.caption(f"Airport context: {resolved_airport}")
+
+        st.session_state.chat_history.append(
+            {
+                "role": "assistant",
+                "content": answer,
+            }
+        )
+
+        st.session_state.chat_history.append(
+            {
+                "role": "assistant",
+                "content": answer,
+            }
+        )
