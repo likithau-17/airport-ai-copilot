@@ -98,6 +98,12 @@ if st.button("🔍 Investigate Airport"):
 if st.session_state.investigation:
     investigation = st.session_state.investigation
 
+    st.subheader("Agent Activity Trace")
+
+    st.write("1️⃣ Operations Investigator → completed")
+    st.write("2️⃣ Policy & Compliance → completed")
+    st.write("3️⃣ Resolution → completed")
+
     st.write(f"**Assessment:** {investigation['assessment']}")
 
     if investigation["issues"]:
@@ -175,6 +181,7 @@ if st.session_state.investigation:
                     metrics["surge_multiplier"],
                     validation_result,
                     approval_result,
+                    execution_result["status"],
                 )
 
                 save_audit_record(audit_record)

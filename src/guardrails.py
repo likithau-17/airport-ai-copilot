@@ -177,6 +177,7 @@ def create_audit_record(
     proposed_value: float,
     validation_result: dict,
     approval_result: dict,
+    execution_status: str | None = None,
 ) -> dict:
     """Create an auditable record of an operational action."""
 
@@ -187,7 +188,10 @@ def create_audit_record(
         "proposed_value": proposed_value,
         "policy_status": validation_result["status"],
         "approval_decision": approval_result["approval_decision"],
-        "execution_status": approval_result.get("execution_status", "unknown"),
+        "execution_status": execution_status or approval_result.get(
+            "execution_status",
+            "unknown",
+        ),
         "reason": validation_result["reason"],
     }
 
