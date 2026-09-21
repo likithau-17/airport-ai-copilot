@@ -239,7 +239,7 @@ if user_query:
     with st.chat_message("assistant"):
         try:
             with st.spinner("Searching airport policies..."):
-                answer, rag_sources = answer_policy_question_with_sources(
+                                answer, rag_sources = answer_policy_question_with_sources(
                     f"""
     Previous conversation context:
     {st.session_state.memory.get_history()}
@@ -249,7 +249,8 @@ if user_query:
 
     User question:
     {user_query}
-    """.strip()
+    """.strip(),
+                    resolved_airport,
                 )
         except Exception as exc:
             answer = (

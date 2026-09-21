@@ -56,11 +56,19 @@ def get_retriever():
     return vector_store.as_retriever(search_kwargs={"k": 3})
 
 
-def retrieve_policy_context(question: str) -> str:
-    """Retrieve relevant policy chunks with their source filenames."""
+def retrieve_policy_context(question: str, airport_code: str | None = None) -> str:
+    """Retrieve relevant policy chunks, optionally filtered to one airport."""
 
     retriever = get_retriever()
     documents = retriever.invoke(question)
+
+    if airport_code:
+        airport_code = airport_code.lower()
+        documents = [
+            document
+            for document in documents
+            if document.metadata.get("filename", "").lower().startswith(airport_code)
+        ]
 
     sections = []
 
@@ -77,12 +85,22 @@ def retrieve_policy_context(question: str) -> str:
 
     return "\n\n---\n\n".join(sections)
 
-
-def answer_policy_question_with_sources(question: str) -> tuple[str, list[str]]:
-    """Generate a grounded policy answer and return the retrieved source filenames."""
+def answer_policy_question_with_sources(
+    question: str,
+    airport_code: str | None = None,
+) -> tuple[str, list[str]]:
+    """Generate a grounded policy answer and return retrieved source filenames."""
 
     retriever = get_retriever()
     documents = retriever.invoke(question)
+
+    if airport_code:
+        airport_code = airport_code.lower()
+        documents = [
+            document
+            for document in documents
+            if document.metadata.get("filename", "").lower().startswith(airport_code)
+        ]
 
     context = "\n\n---\n\n".join(
         f"Source: {document.metadata.get('filename', 'unknown')}\n"
@@ -115,11 +133,10 @@ def answer_policy_question_with_sources(question: str) -> tuple[str, list[str]]:
             sources,
         )
 
-
 def answer_policy_question(question: str) -> str:
     """Retrieve policy context and generate a grounded Gemini answer."""
 
-    context = retrieve_policy_context(question)
+    context = retrieve_policy_context(question, airport_code)
     prompt = build_policy_prompt(question, context)
 
     client = genai.Client(api_key=GEMINI_API_KEY)
