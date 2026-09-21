@@ -37,3 +37,18 @@ def test_retrieval_returns_multiple_policy_chunks():
     )
     chunks = [chunk for chunk in context.split("\n\n---\n\n") if chunk.strip()]
     assert len(chunks) >= 2
+
+
+def test_policy_prompt_has_ptcf_and_few_shot_structure():
+    from src.prompts import build_policy_prompt
+
+    prompt = build_policy_prompt(
+        "When is surge approval required?",
+        "SFO pricing policy: surge >= 1.3x requires human approval.",
+    )
+
+    assert "Persona:" in prompt
+    assert "Task:" in prompt
+    assert "Context:" in prompt
+    assert "Format:" in prompt
+    assert "Few-shot example:" in prompt

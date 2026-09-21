@@ -178,9 +178,14 @@ def create_audit_record(
     validation_result: dict,
     approval_result: dict,
     execution_status: str | None = None,
+    request: str | None = None,
+    agents_invoked: list[str] | None = None,
+    tools_called: list[str] | None = None,
+    rag_sources: list[str] | None = None,
+    recommendation: str | None = None,
+    risk_level: str | None = None,
 ) -> dict:
-    """Create an auditable record of an operational action."""
-
+    """Create a traceable audit record for an operational action."""
     return {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "airport_code": airport_code.upper(),
@@ -193,7 +198,14 @@ def create_audit_record(
             "unknown",
         ),
         "reason": validation_result["reason"],
+        "request": request,
+        "agents_invoked": agents_invoked or [],
+        "tools_called": tools_called or [],
+        "rag_sources": rag_sources or [],
+        "recommendation": recommendation,
+        "risk_level": risk_level,
     }
+
 
 def save_audit_record(audit_record: dict) -> None:
     """Persist an audit record as one JSON object per line."""

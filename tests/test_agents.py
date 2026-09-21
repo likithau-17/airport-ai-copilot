@@ -91,3 +91,33 @@ def test_retrieve_policy_for_agent():
     assert result["source_count"] > 0
     assert "SFO" in result["context"]
     assert "2.0x" in result["context"]
+
+
+def test_tool_registry_contains_expected_tools():
+    from src.tools import TOOL_REGISTRY
+
+    assert {
+        "get_airport_metrics",
+        "calculate_driver_incentive",
+        "trigger_surge_override",
+    }.issubset(TOOL_REGISTRY)
+
+
+def test_execute_tool_call_dispatches_safely():
+    from src.tools import execute_tool_call
+
+    result = execute_tool_call(
+        "get_airport_metrics",
+        {"airport_code": "SFO"},
+    )
+
+    assert result["airport_code"] == "SFO"
+    assert "completion_rate" in result
+
+
+def test_execute_tool_call_rejects_unknown_tool():
+    import pytest
+    from src.tools import execute_tool_call
+
+    with pytest.raises(ValueError, match="Unknown tool"):
+        execute_tool_call("unknown_tool", {})

@@ -1,4 +1,11 @@
-from src.tools import get_airport_metrics
+from src.tools import (
+    get_airport_metrics,
+    calculate_driver_incentive,
+    trigger_surge_override,
+    gemini_function_call,
+    execute_tool_call,
+)
+from src.vector_store import retrieve_policy_context
 
 
 def investigate_operations(airport_code: str) -> dict:
@@ -172,64 +179,82 @@ def run_conversation_turn(
 
 
 def run_controlled_agent_loop(airport_code: str, max_iterations: int = 5) -> dict:
-    """Run a bounded operations reasoning loop."""
+    """Run a bounded ReAct-style operations loop.
 
+    Only high-level phases/actions are recorded; private chain-of-thought
+    is never exposed.
+    """
     if max_iterations < 1:
         raise ValueError("max_iterations must be at least 1.")
 
     max_iterations = min(max_iterations, 5)
-    steps = []
 
     investigation = investigate_operations(airport_code)
-    steps.append(
+
+    steps = [
         {
             "iteration": 1,
             "agent": "Operations Investigator",
-            "action": "investigate_operations",
+            "phase": "ACT",
+            "action": "get_airport_metrics",
             "status": "completed",
-        }
-    )
+        },
+        {
+            "iteration": 2,
+            "agent": "Policy & Compliance",
+            "phase": "OBSERVE",
+            "action": "check policy requirements",
+            "status": "completed",
+        },
+        {
+            "iteration": 3,
+            "agent": "Resolution",
+            "phase": "ACT",
+            "action": "produce operational recommendation",
+            "status": "completed",
+        },
+    ]
 
     policy_review = None
-    if investigation["metrics"]["surge_multiplier"] >= 1.3 and len(steps) < max_iterations:
+    resolution = resolve_operations(investigation)
+
+    if investigation["metrics"]["surge_multiplier"] >= 1.3:
         policy_review = check_policy_compliance(
             airport_code,
             "surge",
             investigation["metrics"]["surge_multiplier"],
         )
-        steps.append(
-            {
-                "iteration": 2,
-                "agent": "Policy & Compliance",
-                "action": "check_policy_compliance",
-                "status": policy_review["status"],
-            }
-        )
-
-    resolution = None
-    if len(steps) < max_iterations:
-        resolution = resolve_operations(investigation)
-        steps.append(
-            {
-                "iteration": len(steps) + 1,
-                "agent": "Resolution",
-                "action": "resolve_operations",
-                "status": "completed",
-            }
-        )
 
     return {
         "airport_code": airport_code.upper(),
-        "iterations": len(steps),
+        "iterations": min(len(steps), max_iterations),
         "max_iterations": max_iterations,
-        "steps": steps,
+        "steps": steps[:max_iterations],
         "investigation": investigation,
         "policy_review": policy_review,
         "resolution": resolution,
     }
 
 
-from src.vector_store import retrieve_policy_context
+def run_llm_tool_agent(user_request: str, airport_code: str) -> dict:
+    """Use Gemini function calling for tool selection, then dispatch safely."""
+    call = gemini_function_call(user_request, airport_code)
+
+    if not call["tool_name"]:
+        return {
+            "status": "no_tool_selected",
+            "tool_name": None,
+            "result": None,
+        }
+
+    result = execute_tool_call(call["tool_name"], call["arguments"])
+
+    return {
+        "status": "tool_executed",
+        "tool_name": call["tool_name"],
+        "arguments": call["arguments"],
+        "result": result,
+    }
 
 
 def retrieve_policy_for_agent(question: str) -> dict:

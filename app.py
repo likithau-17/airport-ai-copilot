@@ -15,7 +15,7 @@ from src.guardrails import (
     save_audit_record,
 )
 
-from src.vector_store import answer_policy_question
+from src.vector_store import answer_policy_question_with_sources
 
 from src.memory import ConversationMemory
 from src.agents import run_conversation_turn
@@ -239,7 +239,7 @@ if user_query:
     with st.chat_message("assistant"):
         try:
             with st.spinner("Searching airport policies..."):
-                answer = answer_policy_question(
+                answer, rag_sources = answer_policy_question_with_sources(
                     f"""
     Previous conversation context:
     {st.session_state.memory.get_history()}
@@ -259,6 +259,10 @@ if user_query:
             st.warning(f"AI service error: {exc}")
 
         st.caption(f"Airport context: {resolved_airport}")
+
+        with st.expander("📚 RAG Sources"):
+            for source in rag_sources:
+                st.write(f"- {source}")
 
         st.session_state.chat_history.append(
             {

@@ -105,3 +105,115 @@ def trigger_surge_override(
         "surge_multiplier": surge_multiplier,
         "reason": "Surge override approved and triggered.",
     }
+
+
+TOOL_DEFINITIONS = {
+    "get_airport_metrics": {
+        "name": "get_airport_metrics",
+        "description": "Get the latest operational metrics for an airport.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "airport_code": {
+                    "type": "string",
+                    "description": "Airport code such as SFO, LAX, or JFK.",
+                }
+            },
+            "required": ["airport_code"],
+        },
+    },
+    "calculate_driver_incentive": {
+        "name": "calculate_driver_incentive",
+        "description": "Calculate a proposed driver incentive from operational pressure.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "airport_code": {"type": "string"},
+                "active_drivers": {"type": "integer"},
+                "request_volume": {"type": "integer"},
+                "queue_size": {"type": "integer"},
+            },
+            "required": [
+                "airport_code",
+                "active_drivers",
+                "request_volume",
+                "queue_size",
+            ],
+        },
+    },
+    "trigger_surge_override": {
+        "name": "trigger_surge_override",
+        "description": "Validate and trigger a temporary surge override.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "airport_code": {"type": "string"},
+                "surge_multiplier": {"type": "number"},
+                "approved": {"type": "boolean"},
+            },
+            "required": ["airport_code", "surge_multiplier"],
+        },
+    },
+}
+
+TOOL_REGISTRY = {
+    "get_airport_metrics": get_airport_metrics,
+    "calculate_driver_incentive": calculate_driver_incentive,
+    "trigger_surge_override": trigger_surge_override,
+}
+
+
+def execute_tool_call(tool_name: str, arguments: dict) -> dict:
+    if tool_name not in TOOL_REGISTRY:
+        raise ValueError(f"Unknown tool: {tool_name}")
+    return TOOL_REGISTRY[tool_name](**arguments)
+
+
+def gemini_function_call(user_request: str, airport_code: str) -> dict:
+    """Ask Gemini to select one registered read/analysis tool.
+
+    This demonstrates function calling while keeping high-impact execution
+    behind the existing policy and approval guardrails.
+    """
+    from google import genai
+    from google.genai import types
+    from src.config import GEMINI_API_KEY, GEMINI_MODEL
+
+    declarations = [
+        types.FunctionDeclaration(
+            name=definition["name"],
+            description=definition["description"],
+            parameters_json_schema=definition["parameters"],
+        )
+        for definition in TOOL_DEFINITIONS.values()
+    ]
+
+    tool = types.Tool(function_declarations=declarations)
+
+    client = genai.Client(api_key=GEMINI_API_KEY)
+    response = client.models.generate_content(
+        model=GEMINI_MODEL,
+        contents=(
+            f"Airport: {airport_code}\n"
+            f"User request: {user_request}\n"
+            "Select the single most relevant tool. Do not execute high-impact "
+            "actions without approval."
+        ),
+        config=types.GenerateContentConfig(tools=[tool]),
+    )
+
+    for candidate in response.candidates or []:
+        for part in candidate.content.parts or []:
+            if getattr(part, "function_call", None):
+                function_call = part.function_call
+                arguments = dict(function_call.args or {})
+                arguments.setdefault("airport_code", airport_code)
+                return {
+                    "tool_name": function_call.name,
+                    "arguments": arguments,
+                }
+
+    return {
+        "tool_name": None,
+        "arguments": {},
+    }

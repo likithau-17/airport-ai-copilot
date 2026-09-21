@@ -150,3 +150,36 @@ def test_audit_record_captures_approved_action():
     assert record["execution_status"] == "approved"
     assert "timestamp" in record
     assert "reason" in record
+
+
+def test_audit_record_contains_full_trace():
+    from src.guardrails import create_audit_record
+
+    validation = {
+        "status": "approval_required",
+        "reason": "Human approval is required.",
+    }
+    approval = {
+        "approval_decision": "approved",
+        "execution_status": "approved",
+    }
+
+    record = create_audit_record(
+        "SFO",
+        "surge",
+        1.6,
+        validation,
+        approval,
+        request="Increase SFO surge",
+        agents_invoked=["Operations Investigator", "Policy & Compliance", "Resolution"],
+        tools_called=["get_airport_metrics", "trigger_surge_override"],
+        rag_sources=["sfo_pricing.md"],
+        recommendation="Increase surge after approval.",
+        risk_level="high",
+    )
+
+    assert record["request"] == "Increase SFO surge"
+    assert "Policy & Compliance" in record["agents_invoked"]
+    assert "get_airport_metrics" in record["tools_called"]
+    assert record["rag_sources"] == ["sfo_pricing.md"]
+    assert record["risk_level"] == "high"

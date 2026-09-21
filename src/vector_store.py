@@ -57,14 +57,63 @@ def get_retriever():
 
 
 def retrieve_policy_context(question: str) -> str:
-    """Retrieve relevant policy chunks and combine them into context."""
+    """Retrieve relevant policy chunks with their source filenames."""
 
     retriever = get_retriever()
     documents = retriever.invoke(question)
 
-    return "\n\n---\n\n".join(
-        document.page_content for document in documents
+    sections = []
+
+    for document in documents:
+        source = document.metadata.get("filename") or document.metadata.get(
+            "source",
+            "unknown",
+        )
+
+        sections.append(
+            f"Source: {source}\n"
+            f"Relevant Policy:\n{document.page_content}"
+        )
+
+    return "\n\n---\n\n".join(sections)
+
+
+def answer_policy_question_with_sources(question: str) -> tuple[str, list[str]]:
+    """Generate a grounded policy answer and return the retrieved source filenames."""
+
+    retriever = get_retriever()
+    documents = retriever.invoke(question)
+
+    context = "\n\n---\n\n".join(
+        f"Source: {document.metadata.get('filename', 'unknown')}\n"
+        f"Relevant Policy:\n{document.page_content}"
+        for document in documents
     )
+
+    sources = list(
+        dict.fromkeys(
+            document.metadata.get("filename", "unknown")
+            for document in documents
+        )
+    )
+
+    prompt = build_policy_prompt(question, context)
+
+    client = genai.Client(api_key=GEMINI_API_KEY)
+
+    try:
+        response = client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=prompt,
+        )
+        return response.text, sources
+    except Exception:
+        return (
+            "The AI service is temporarily unavailable. "
+            "The retrieved policy context is available, but the language model "
+            "could not generate a response right now.",
+            sources,
+        )
 
 
 def answer_policy_question(question: str) -> str:
